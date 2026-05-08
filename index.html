@@ -181,6 +181,49 @@
     flex-wrap: wrap;
   }
 
+  .add-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .add-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 14px 16px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    outline: none;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .add-row input::placeholder { color: rgba(255, 255, 255, 0.45); }
+
+  .add-row input:focus {
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .add-row button {
+    flex: 0 0 auto;
+    min-width: 90px;
+    padding: 14px 18px;
+    font-size: 16px;
+    background: linear-gradient(180deg, #6cd3ff, #2196f3);
+    color: #06122a;
+    box-shadow: 0 8px 22px rgba(33, 150, 243, 0.3), inset 0 -3px 0 rgba(0,0,0,0.15);
+  }
+
+  .error {
+    color: #ffb3b3;
+    font-size: 13px;
+    min-height: 1em;
+    margin-top: -6px;
+  }
+
   button {
     flex: 1;
     min-width: 130px;
@@ -308,6 +351,12 @@
           <button id="reset" class="reset" type="button">Reset</button>
         </div>
 
+        <form id="addForm" class="add-row" autocomplete="off">
+          <input id="addInput" type="text" placeholder="Add a state…" maxlength="40" />
+          <button id="addBtn" type="submit">Add</button>
+        </form>
+        <div id="addError" class="error" role="alert" aria-live="polite"></div>
+
         <div class="remaining">
           <h3>States</h3>
           <div id="chips" class="chips"></div>
@@ -343,7 +392,11 @@
   const chipsEl = document.getElementById('chips');
   const spinBtn = document.getElementById('spin');
   const resetBtn = document.getElementById('reset');
+  const addForm = document.getElementById('addForm');
+  const addInput = document.getElementById('addInput');
+  const addError = document.getElementById('addError');
 
+  let allStates = [...SELN_STATES];
   let remaining = [...SELN_STATES];
   let picked = [];
   let rotation = 0;
@@ -360,7 +413,7 @@
   }
 
   function colorFor(label) {
-    const idx = SELN_STATES.indexOf(label);
+    const idx = allStates.indexOf(label);
     return PALETTE[(idx >= 0 ? idx : 0) % PALETTE.length];
   }
 
@@ -446,7 +499,7 @@
     pickedCountEl.textContent = picked.length;
 
     chipsEl.innerHTML = '';
-    SELN_STATES.forEach(s => {
+    allStates.forEach(s => {
       const span = document.createElement('span');
       span.className = 'chip' + (picked.includes(s) ? ' picked' : '');
       span.textContent = s;
@@ -454,7 +507,7 @@
     });
 
     spinBtn.disabled = spinning || remaining.length === 0;
-    resetBtn.disabled = spinning || picked.length === 0;
+    resetBtn.disabled = spinning || (picked.length === 0 && allStates.length === SELN_STATES.length);
   }
 
   function easeOutCubic(t) {
@@ -506,19 +559,45 @@
 
   function reset() {
     if (spinning) return;
+    allStates = [...SELN_STATES];
     remaining = [...SELN_STATES];
     picked = [];
     rotation = 0;
     resultEl.textContent = 'Press Spin to begin';
     resultEl.classList.add('placeholder');
+    addError.textContent = '';
+    drawWheel();
+    renderPanel();
+  }
+
+  function showAddError(msg) {
+    addError.textContent = msg;
+    if (msg) setTimeout(() => { if (addError.textContent === msg) addError.textContent = ''; }, 2500);
+  }
+
+  function addState(rawName) {
+    if (spinning) return;
+    const name = rawName.trim().replace(/\s+/g, ' ');
+    if (!name) { showAddError('Enter a name to add.'); return; }
+    const exists = allStates.some(s => s.toLowerCase() === name.toLowerCase());
+    if (exists) { showAddError(`"${name}" is already on the wheel.`); return; }
+    allStates.push(name);
+    remaining.push(name);
+    addInput.value = '';
+    addError.textContent = '';
     drawWheel();
     renderPanel();
   }
 
   spinBtn.addEventListener('click', spin);
   resetBtn.addEventListener('click', reset);
+  addForm.addEventListener('submit', e => {
+    e.preventDefault();
+    addState(addInput.value);
+  });
   window.addEventListener('resize', resizeCanvas);
   document.addEventListener('keydown', e => {
+    if (document.activeElement === addInput) return;
     if (e.code === 'Space') { e.preventDefault(); spin(); }
     else if (e.key === 'r' || e.key === 'R') { reset(); }
   });
