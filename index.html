@@ -286,11 +286,14 @@
   }
 
   .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: #fff;
     border-radius: 999px;
-    padding: 6px 12px;
+    padding: 4px 6px 4px 12px;
     font-size: 13px;
     font-weight: 600;
   }
@@ -300,6 +303,160 @@
     border-color: rgba(255, 82, 82, 0.5);
     color: #ffb3b3;
     text-decoration: line-through;
+  }
+
+  .chip button.chip-btn {
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    box-shadow: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chip button.chip-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.32);
+    transform: none;
+    filter: none;
+  }
+
+  .chip.picked button.chip-btn {
+    background: rgba(110, 231, 183, 0.35);
+    color: #d1fae5;
+  }
+
+  .chip.picked button.chip-btn:hover:not(:disabled) {
+    background: rgba(110, 231, 183, 0.55);
+  }
+
+  .timer-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 18px;
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .timer-card.warn { border-color: rgba(255, 82, 82, 0.55); }
+  .timer-card.done {
+    animation: flashRed 0.6s ease 3;
+  }
+
+  .timer-display {
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(34px, 4.6vw, 56px);
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+
+  .timer-display.warn { color: #ff8585; }
+
+  .timer-side {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+    min-width: 130px;
+  }
+
+  .timer-input-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .timer-input-row input {
+    width: 70px;
+    padding: 8px 10px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    text-align: center;
+    outline: none;
+  }
+
+  .timer-input-row input:focus { border-color: var(--accent); }
+
+  .timer-controls {
+    display: flex;
+    gap: 6px;
+  }
+
+  .timer-controls button {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  .timer-controls button:hover:not(:disabled) {
+    background: rgba(255,255,255,0.22);
+    transform: none;
+    filter: none;
+  }
+
+  @keyframes flashRed {
+    0%, 100% { background: var(--card); }
+    50% { background: rgba(255, 82, 82, 0.32); }
+  }
+
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    60% { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .result-value.pop { animation: pop 0.55s cubic-bezier(.2,1.4,.4,1); }
+
+  .confetti {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 50;
+  }
+
+  .confetti span {
+    position: absolute;
+    width: 10px;
+    height: 14px;
+    top: -20px;
+    border-radius: 2px;
+    will-change: transform, opacity;
+    animation: fall linear forwards;
+  }
+
+  @keyframes fall {
+    0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
+    100% { transform: translate3d(var(--dx, 0), 110vh, 0) rotate(720deg); opacity: 0.9; }
   }
 
   footer {
@@ -346,6 +503,21 @@
           </div>
         </div>
 
+        <div id="timerCard" class="timer-card">
+          <div id="timerDisplay" class="timer-display">0:30</div>
+          <div class="timer-side">
+            <label class="timer-input-row">
+              <span>Sec</span>
+              <input id="timerInput" type="number" min="1" max="3600" value="30" />
+            </label>
+            <div class="timer-controls">
+              <button id="timerStart" type="button">Start</button>
+              <button id="timerPause" type="button">Pause</button>
+              <button id="timerReset" type="button">Reset</button>
+            </div>
+          </div>
+        </div>
+
         <div class="buttons">
           <button id="spin" class="spin" type="button">Spin</button>
           <button id="reset" class="reset" type="button">Reset</button>
@@ -366,6 +538,7 @@
 
     <footer>Tip: Use full-screen + Zoom &ldquo;Share Screen&rdquo; for the best look.</footer>
   </div>
+  <div id="confetti" class="confetti" aria-hidden="true"></div>
 
 <script>
 (() => {
@@ -395,12 +568,27 @@
   const addForm = document.getElementById('addForm');
   const addInput = document.getElementById('addInput');
   const addError = document.getElementById('addError');
+  const timerCard = document.getElementById('timerCard');
+  const timerDisplay = document.getElementById('timerDisplay');
+  const timerInput = document.getElementById('timerInput');
+  const timerStartBtn = document.getElementById('timerStart');
+  const timerPauseBtn = document.getElementById('timerPause');
+  const timerResetBtn = document.getElementById('timerReset');
+  const confettiEl = document.getElementById('confetti');
 
   let allStates = [...SELN_STATES];
   let remaining = [...SELN_STATES];
   let picked = [];
   let rotation = 0;
   let spinning = false;
+  let winnerLabel = null;
+  let winnerGlow = 0;
+  let winnerGlowRAF = null;
+
+  let timerSeconds = 30;
+  let timerRemaining = 30;
+  let timerEndAt = null;
+  let timerInterval = null;
 
   function resizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
@@ -449,6 +637,8 @@
     ctx.translate(cx, cy);
     ctx.rotate(rotation);
 
+    const winnerIdx = winnerLabel ? remaining.indexOf(winnerLabel) : -1;
+
     for (let i = 0; i < n; i++) {
       const start = i * arc;
       const end = start + arc;
@@ -460,9 +650,32 @@
       ctx.fillStyle = colorFor(remaining[i]);
       ctx.fill();
 
+      if (i === winnerIdx && winnerGlow > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = winnerGlow * 0.6;
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.restore();
+      }
+
       ctx.lineWidth = 2;
       ctx.strokeStyle = 'rgba(0,0,0,0.18)';
       ctx.stroke();
+
+      if (i === winnerIdx && winnerGlow > 0) {
+        ctx.save();
+        ctx.lineWidth = 6 + winnerGlow * 6;
+        ctx.strokeStyle = `rgba(255, 213, 74, ${0.5 + winnerGlow * 0.5})`;
+        ctx.shadowColor = '#ffd54a';
+        ctx.shadowBlur = 24 * winnerGlow;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, radius, start, end);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
     ctx.beginPath();
@@ -500,14 +713,38 @@
 
     chipsEl.innerHTML = '';
     allStates.forEach(s => {
+      const isPicked = picked.includes(s);
       const span = document.createElement('span');
-      span.className = 'chip' + (picked.includes(s) ? ' picked' : '');
-      span.textContent = s;
+      span.className = 'chip' + (isPicked ? ' picked' : '');
+
+      const text = document.createElement('span');
+      text.textContent = s;
+      span.appendChild(text);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chip-btn';
+      btn.disabled = spinning;
+      if (isPicked) {
+        btn.textContent = '↺';
+        btn.title = `Put ${s} back on the wheel`;
+        btn.setAttribute('aria-label', `Put ${s} back on the wheel`);
+        btn.addEventListener('click', () => readdState(s));
+      } else {
+        btn.textContent = '×';
+        btn.title = `Remove ${s} from the wheel`;
+        btn.setAttribute('aria-label', `Remove ${s} from the wheel`);
+        btn.addEventListener('click', () => removeState(s));
+      }
+      span.appendChild(btn);
+
       chipsEl.appendChild(span);
     });
 
     spinBtn.disabled = spinning || remaining.length === 0;
-    resetBtn.disabled = spinning || (picked.length === 0 && allStates.length === SELN_STATES.length);
+    const isPristine = picked.length === 0 && allStates.length === SELN_STATES.length
+      && SELN_STATES.every(s => allStates.includes(s));
+    resetBtn.disabled = spinning || isPristine;
   }
 
   function easeOutCubic(t) {
@@ -517,6 +754,9 @@
   function spin() {
     if (spinning || remaining.length === 0) return;
     spinning = true;
+    winnerLabel = null;
+    winnerGlow = 0;
+    if (winnerGlowRAF) cancelAnimationFrame(winnerGlowRAF);
     renderPanel();
 
     const n = remaining.length;
@@ -549,10 +789,89 @@
     const winner = remaining[index];
     resultEl.textContent = winner;
     resultEl.classList.remove('placeholder');
-    picked.push(winner);
-    remaining.splice(index, 1);
+    resultEl.classList.remove('pop');
+    void resultEl.offsetWidth;
+    resultEl.classList.add('pop');
+
+    winnerLabel = winner;
     rotation = rotation % (Math.PI * 2);
     spinning = false;
+
+    runWinnerGlow(() => {
+      const idx = remaining.indexOf(winner);
+      if (idx >= 0) {
+        picked.push(winner);
+        remaining.splice(idx, 1);
+      }
+      winnerLabel = null;
+      drawWheel();
+      renderPanel();
+      startTimerCountdown();
+    });
+
+    launchConfetti();
+    drawWheel();
+    renderPanel();
+  }
+
+  function runWinnerGlow(onDone) {
+    const duration = 1500;
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const pulse = Math.sin(t * Math.PI * 4) * 0.5 + 0.5;
+      winnerGlow = (1 - t) * (0.5 + pulse * 0.5);
+      drawWheel();
+      if (t < 1) {
+        winnerGlowRAF = requestAnimationFrame(step);
+      } else {
+        winnerGlow = 0;
+        winnerGlowRAF = null;
+        if (onDone) onDone();
+      }
+    }
+    winnerGlowRAF = requestAnimationFrame(step);
+  }
+
+  function launchConfetti() {
+    const colors = PALETTE;
+    const count = 90;
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < count; i++) {
+      const piece = document.createElement('span');
+      const left = Math.random() * 100;
+      const dx = (Math.random() - 0.5) * 240;
+      const dur = 2.4 + Math.random() * 1.6;
+      const delay = Math.random() * 0.4;
+      piece.style.left = left + 'vw';
+      piece.style.background = colors[i % colors.length];
+      piece.style.setProperty('--dx', dx + 'px');
+      piece.style.animationDuration = dur + 's';
+      piece.style.animationDelay = delay + 's';
+      piece.style.width = (6 + Math.random() * 8) + 'px';
+      piece.style.height = (10 + Math.random() * 10) + 'px';
+      piece.addEventListener('animationend', () => piece.remove());
+      frag.appendChild(piece);
+    }
+    confettiEl.appendChild(frag);
+  }
+
+  function removeState(name) {
+    if (spinning) return;
+    const i = remaining.indexOf(name);
+    if (i >= 0) remaining.splice(i, 1);
+    const j = allStates.indexOf(name);
+    if (j >= 0) allStates.splice(j, 1);
+    drawWheel();
+    renderPanel();
+  }
+
+  function readdState(name) {
+    if (spinning) return;
+    const i = picked.indexOf(name);
+    if (i >= 0) picked.splice(i, 1);
+    if (!remaining.includes(name)) remaining.push(name);
+    if (!allStates.includes(name)) allStates.push(name);
     drawWheel();
     renderPanel();
   }
@@ -563,11 +882,99 @@
     remaining = [...SELN_STATES];
     picked = [];
     rotation = 0;
+    winnerLabel = null;
+    winnerGlow = 0;
+    if (winnerGlowRAF) { cancelAnimationFrame(winnerGlowRAF); winnerGlowRAF = null; }
     resultEl.textContent = 'Press Spin to begin';
     resultEl.classList.add('placeholder');
+    resultEl.classList.remove('pop');
     addError.textContent = '';
+    resetTimer();
     drawWheel();
     renderPanel();
+  }
+
+  function formatTime(s) {
+    s = Math.max(0, Math.ceil(s));
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  }
+
+  function renderTimer() {
+    timerDisplay.textContent = formatTime(timerRemaining);
+    const warn = timerRemaining <= 5 && timerRemaining > 0 && timerEndAt;
+    timerDisplay.classList.toggle('warn', !!warn);
+    timerCard.classList.toggle('warn', !!warn);
+  }
+
+  function readTimerInput() {
+    const v = parseInt(timerInput.value, 10);
+    return (Number.isFinite(v) && v > 0) ? Math.min(v, 3600) : 30;
+  }
+
+  function startTimer() {
+    if (timerInterval) return;
+    if (timerRemaining <= 0) timerRemaining = readTimerInput();
+    timerEndAt = performance.now() + timerRemaining * 1000;
+    timerCard.classList.remove('done');
+    timerInterval = setInterval(() => {
+      timerRemaining = (timerEndAt - performance.now()) / 1000;
+      if (timerRemaining <= 0) {
+        timerRemaining = 0;
+        renderTimer();
+        stopTimer();
+        timerCard.classList.add('done');
+        playBeep();
+      } else {
+        renderTimer();
+      }
+    }, 100);
+  }
+
+  function stopTimer() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    timerEndAt = null;
+  }
+
+  function pauseTimer() { stopTimer(); renderTimer(); }
+
+  function resetTimer() {
+    stopTimer();
+    timerSeconds = readTimerInput();
+    timerRemaining = timerSeconds;
+    timerCard.classList.remove('done');
+    renderTimer();
+  }
+
+  function startTimerCountdown() {
+    timerSeconds = readTimerInput();
+    timerRemaining = timerSeconds;
+    timerCard.classList.remove('done');
+    renderTimer();
+    startTimer();
+  }
+
+  function playBeep() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ac = new Ctx();
+      const tones = [880, 660, 880];
+      tones.forEach((freq, i) => {
+        const o = ac.createOscillator();
+        const g = ac.createGain();
+        o.frequency.value = freq;
+        o.type = 'triangle';
+        o.connect(g); g.connect(ac.destination);
+        const t0 = ac.currentTime + i * 0.18;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+        o.start(t0); o.stop(t0 + 0.18);
+      });
+      setTimeout(() => ac.close(), 1200);
+    } catch (e) {}
   }
 
   function showAddError(msg) {
@@ -595,14 +1002,26 @@
     e.preventDefault();
     addState(addInput.value);
   });
+  timerStartBtn.addEventListener('click', startTimer);
+  timerPauseBtn.addEventListener('click', pauseTimer);
+  timerResetBtn.addEventListener('click', resetTimer);
+  timerInput.addEventListener('change', () => {
+    if (!timerInterval) {
+      timerSeconds = readTimerInput();
+      timerRemaining = timerSeconds;
+      renderTimer();
+    }
+  });
   window.addEventListener('resize', resizeCanvas);
   document.addEventListener('keydown', e => {
-    if (document.activeElement === addInput) return;
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     if (e.code === 'Space') { e.preventDefault(); spin(); }
     else if (e.key === 'r' || e.key === 'R') { reset(); }
   });
 
   resizeCanvas();
+  resetTimer();
   renderPanel();
 })();
 </script>
