@@ -6,19 +6,22 @@
 <title>SELN Map Picker</title>
 <style>
   :root {
-    --bg-1: #0b1437;
-    --bg-2: #1a237e;
-    --accent: #ffd54a;
-    --accent-2: #ff5252;
-    --text: #ffffff;
-    --muted: #c9d1ff;
-    --card: rgba(255, 255, 255, 0.06);
-    --card-border: rgba(255, 255, 255, 0.18);
-    --state-base: #2a3160;
-    --state-stroke: #0a0e26;
-    --state-seln: #4cc9f0;
-    --state-picked: #6b2a3a;
-    --state-cycle: #ffd54a;
+    --seln-green: #6CB33F;
+    --seln-green-dark: #4f8b2c;
+    --seln-blue: #2BA8E0;
+    --seln-blue-dark: #1D76BB;
+    --bg: #ffffff;
+    --bg-soft: #f4f7fb;
+    --accent: var(--seln-green);
+    --text: #1a2230;
+    --muted: #6b7585;
+    --card: #ffffff;
+    --card-border: #dbe2ed;
+    --shadow: 0 6px 22px rgba(20, 34, 55, 0.08);
+    --state-base: #e3e9f1;
+    --state-stroke: #ffffff;
+    --state-seln: var(--seln-blue);
+    --state-picked: #b6bfcc;
   }
 
   * { box-sizing: border-box; }
@@ -29,7 +32,7 @@
     height: 100%;
     font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     color: var(--text);
-    background: radial-gradient(ellipse at top, var(--bg-2) 0%, var(--bg-1) 60%, #050818 100%);
+    background: linear-gradient(180deg, #ffffff 0%, var(--bg-soft) 100%);
     overflow: hidden;
   }
 
@@ -47,10 +50,10 @@
     margin: 0;
     font-size: clamp(26px, 3.2vw, 44px);
     font-weight: 800;
-    letter-spacing: 1px;
-    text-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+    letter-spacing: 0.5px;
+    color: var(--seln-blue-dark);
   }
-  h1 .accent { color: var(--accent); }
+  h1 .accent { color: var(--seln-green); }
 
   .subtitle {
     margin-top: 4px;
@@ -63,7 +66,7 @@
     position: absolute;
     top: 6px;
     right: 0;
-    color: var(--muted);
+    color: var(--seln-blue-dark);
     text-decoration: none;
     font-size: 13px;
     font-weight: 600;
@@ -72,7 +75,7 @@
     border: 1px solid var(--card-border);
     background: var(--card);
   }
-  .nav-link:hover { color: #fff; background: rgba(255,255,255,0.12); }
+  .nav-link:hover { color: var(--seln-blue-dark); background: #eef3f9; border-color: #c7d3e3; }
 
   main {
     display: grid;
@@ -84,9 +87,10 @@
 
   .map-wrap {
     position: relative;
-    background: rgba(0,0,0,0.18);
+    background: #ffffff;
     border: 1px solid var(--card-border);
     border-radius: 22px;
+    box-shadow: var(--shadow);
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -106,32 +110,34 @@
   .state {
     fill: var(--state-base);
     stroke: var(--state-stroke);
-    stroke-width: 0.6;
-    transition: fill 120ms ease, filter 120ms ease, opacity 200ms ease;
+    stroke-width: 0.8;
+    transition: fill 200ms ease, stroke 120ms ease, filter 120ms ease, opacity 200ms ease;
   }
   .state.seln { fill: var(--state-seln); }
-  .state.picked { fill: var(--state-picked); opacity: 0.78; }
+  .state.picked { fill: var(--state-picked); }
   .state.cycle {
-    fill: var(--state-cycle);
-    filter: drop-shadow(0 0 14px rgba(255, 213, 74, 0.85));
+    stroke: var(--seln-green);
+    stroke-width: 2.6;
+    filter: drop-shadow(0 0 14px rgba(108, 179, 63, 0.85));
   }
   .state.winner {
-    fill: var(--state-cycle);
-    filter: drop-shadow(0 0 26px rgba(255, 213, 74, 1)) brightness(1.1);
+    stroke: var(--seln-green);
+    stroke-width: 3;
+    filter: drop-shadow(0 0 28px rgba(108, 179, 63, 1));
     animation: winnerPulse 0.9s ease-in-out infinite;
   }
   @keyframes winnerPulse {
-    0%, 100% { filter: drop-shadow(0 0 22px rgba(255, 213, 74, 0.95)) brightness(1.05); }
-    50% { filter: drop-shadow(0 0 38px rgba(255, 240, 140, 1)) brightness(1.25); }
+    0%, 100% { filter: drop-shadow(0 0 22px rgba(108, 179, 63, 0.95)); }
+    50% { filter: drop-shadow(0 0 40px rgba(108, 179, 63, 1)); }
   }
 
   .state-label {
-    fill: #fff;
+    fill: #ffffff;
     font-weight: 800;
     text-anchor: middle;
     pointer-events: none;
     paint-order: stroke;
-    stroke: rgba(0,0,0,0.7);
+    stroke: var(--seln-blue-dark);
     stroke-width: 3px;
     stroke-linejoin: round;
     font-size: 26px;
@@ -153,7 +159,7 @@
     border: 1px solid var(--card-border);
     border-radius: 18px;
     padding: 18px 22px;
-    backdrop-filter: blur(8px);
+    box-shadow: var(--shadow);
   }
   .result-label {
     font-size: 13px;
@@ -189,11 +195,12 @@
     border: 1px solid var(--card-border);
     border-radius: 14px;
     padding: 12px 14px;
+    box-shadow: var(--shadow);
   }
   .stat .num {
     font-size: clamp(20px, 2.4vw, 28px);
     font-weight: 800;
-    color: var(--accent);
+    color: var(--seln-blue-dark);
   }
   .stat .label {
     font-size: 11px;
@@ -212,22 +219,23 @@
     grid-template-columns: 1fr auto;
     gap: 12px;
     align-items: center;
+    box-shadow: var(--shadow);
   }
-  .timer-card.warn { border-color: rgba(255, 82, 82, 0.55); }
+  .timer-card.warn { border-color: #ef4444; }
   .timer-card.done { animation: flashRed 0.6s ease 3; }
   @keyframes flashRed {
     0%, 100% { background: var(--card); }
-    50% { background: rgba(255, 82, 82, 0.32); }
+    50% { background: #fde2e2; }
   }
   .timer-display {
     font-variant-numeric: tabular-nums;
     font-size: clamp(28px, 4vw, 48px);
     font-weight: 800;
-    color: var(--accent);
+    color: var(--seln-green);
     letter-spacing: 1px;
     line-height: 1;
   }
-  .timer-display.warn { color: #ff8585; }
+  .timer-display.warn { color: #d33b3b; }
   .timer-side { display: flex; flex-direction: column; gap: 6px; min-width: 130px; }
   .timer-input-row {
     display: flex; gap: 6px; align-items: center;
@@ -236,20 +244,20 @@
   }
   .timer-input-row input {
     width: 70px; padding: 6px 8px; font-size: 15px; font-weight: 700;
-    color: #fff; background: rgba(255,255,255,0.08);
+    color: var(--text); background: #ffffff;
     border: 1px solid var(--card-border); border-radius: 10px;
     text-align: center; outline: none;
   }
-  .timer-input-row input:focus { border-color: var(--accent); }
+  .timer-input-row input:focus { border-color: var(--seln-blue); }
   .timer-controls { display: flex; gap: 6px; }
   .timer-controls button {
     flex: 1; min-width: 0; padding: 7px 8px;
     font-size: 12px; font-weight: 700;
-    background: rgba(255,255,255,0.12); color: #fff;
+    background: #eef3f9; color: var(--seln-blue-dark);
     border-radius: 10px; box-shadow: none;
   }
   .timer-controls button:hover:not(:disabled) {
-    background: rgba(255,255,255,0.22);
+    background: #dde7f3;
   }
 
   .buttons { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -265,17 +273,17 @@
     border: none;
     cursor: pointer;
     transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
-    color: #1a1a1a;
+    color: #ffffff;
   }
   button.spin {
-    background: linear-gradient(180deg, #ffe97a, #ffc220);
-    color: #1a1530;
-    box-shadow: 0 8px 22px rgba(255, 200, 60, 0.35), inset 0 -3px 0 rgba(0,0,0,0.12);
+    background: linear-gradient(180deg, #80c651, var(--seln-green));
+    color: #ffffff;
+    box-shadow: 0 8px 22px rgba(108, 179, 63, 0.35), inset 0 -3px 0 rgba(0,0,0,0.12);
   }
   button.reset {
-    background: linear-gradient(180deg, #ff8585, #ff3d3d);
+    background: linear-gradient(180deg, #8995a6, #5b6675);
     color: #ffffff;
-    box-shadow: 0 8px 22px rgba(255, 80, 80, 0.35), inset 0 -3px 0 rgba(0,0,0,0.18);
+    box-shadow: 0 8px 22px rgba(91, 102, 117, 0.3), inset 0 -3px 0 rgba(0,0,0,0.15);
   }
   button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); }
   button:active:not(:disabled) { transform: translateY(1px); }
@@ -285,20 +293,20 @@
   .add-row input {
     flex: 1; min-width: 0;
     padding: 12px 14px; font-size: 15px; font-weight: 500;
-    color: #fff; background: rgba(255, 255, 255, 0.08);
+    color: var(--text); background: #ffffff;
     border: 1px solid var(--card-border); border-radius: 12px;
     outline: none;
   }
-  .add-row input::placeholder { color: rgba(255, 255, 255, 0.45); }
-  .add-row input:focus { border-color: var(--accent); background: rgba(255, 255, 255, 0.12); }
+  .add-row input::placeholder { color: #98a3b3; }
+  .add-row input:focus { border-color: var(--seln-blue); background: #ffffff; }
   .add-row button {
     flex: 0 0 auto; min-width: 80px; padding: 12px 16px; font-size: 14px;
-    background: linear-gradient(180deg, #6cd3ff, #2196f3);
-    color: #06122a;
-    box-shadow: 0 8px 22px rgba(33, 150, 243, 0.3), inset 0 -3px 0 rgba(0,0,0,0.15);
+    background: linear-gradient(180deg, #4cc1f0, var(--seln-blue));
+    color: #ffffff;
+    box-shadow: 0 8px 22px rgba(43, 168, 224, 0.3), inset 0 -3px 0 rgba(0,0,0,0.12);
   }
   .error {
-    color: #ffb3b3;
+    color: #d33b3b;
     font-size: 12px;
     min-height: 1em;
     margin-top: -6px;
@@ -312,6 +320,7 @@
     overflow-y: auto;
     flex: 1 1 auto;
     min-height: 0;
+    box-shadow: var(--shadow);
   }
   .remaining h3 {
     margin: 0 0 8px;
@@ -323,47 +332,49 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip {
     display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #fff;
+    background: #eaf4fb;
+    border: 1px solid #c8e1f1;
+    color: var(--seln-blue-dark);
     border-radius: 999px;
     padding: 4px 6px 4px 12px;
     font-size: 12px;
     font-weight: 600;
   }
   .chip.picked {
-    background: rgba(255, 82, 82, 0.18);
-    border-color: rgba(255, 82, 82, 0.5);
-    color: #ffb3b3;
+    background: #eef6e6;
+    border-color: #cfe5ba;
+    color: var(--seln-green-dark);
     text-decoration: line-through;
   }
   .chip.removed {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: rgba(255,255,255,0.55);
+    background: #f1f3f7;
+    border-color: #dde2ea;
+    color: #8b96a4;
   }
   .chip button.chip-btn {
     flex: 0 0 auto; min-width: 0;
     padding: 0; width: 18px; height: 18px;
     border-radius: 50%; font-size: 12px; font-weight: 700;
     line-height: 1;
-    background: rgba(255, 255, 255, 0.18);
-    color: #fff;
+    background: #c8e1f1;
+    color: var(--seln-blue-dark);
     box-shadow: none;
     display: inline-flex; align-items: center; justify-content: center;
   }
   .chip button.chip-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.32);
+    background: var(--seln-blue);
+    color: #ffffff;
     transform: none; filter: none;
   }
   .chip.picked button.chip-btn,
   .chip.removed button.chip-btn {
-    background: rgba(110, 231, 183, 0.35);
-    color: #d1fae5;
+    background: #cfe5ba;
+    color: var(--seln-green-dark);
   }
   .chip.picked button.chip-btn:hover:not(:disabled),
   .chip.removed button.chip-btn:hover:not(:disabled) {
-    background: rgba(110, 231, 183, 0.55);
+    background: var(--seln-green);
+    color: #ffffff;
   }
 
   footer {
@@ -506,8 +517,8 @@
   };
 
   const PALETTE = [
-    '#ef476f', '#ffd166', '#06d6a0', '#118ab2', '#8338ec',
-    '#fb5607', '#3a86ff', '#ff006e', '#43aa8b', '#f4a261'
+    '#6CB33F', '#2BA8E0', '#1D76BB', '#80c651', '#4cc1f0',
+    '#4f8b2c', '#2BA8E0', '#6CB33F', '#1D76BB', '#80c651'
   ];
 
   const $ = id => document.getElementById(id);
@@ -648,6 +659,32 @@
     resetBtn.disabled = spinning || isPristine;
   }
 
+  let audioCtx = null;
+  function getAudio() {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) audioCtx = new Ctx();
+    }
+    return audioCtx;
+  }
+
+  function tick(progress) {
+    const ac = getAudio();
+    if (!ac) return;
+    const t0 = ac.currentTime;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = 1100 + progress * 350;
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.06, t0 + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.045);
+    osc.start(t0);
+    osc.stop(t0 + 0.06);
+  }
+
   function spin() {
     if (spinning || remaining.length === 0) return;
     spinning = true;
@@ -656,7 +693,7 @@
 
     const winner = remaining[Math.floor(Math.random() * remaining.length)];
 
-    const stepCount = Math.max(18, Math.min(remaining.length * 4, 36));
+    const stepCount = Math.max(16, Math.min(remaining.length * 3, 26));
     const sequence = [];
     for (let i = 0; i < stepCount - 1; i++) {
       sequence.push(remaining[Math.floor(Math.random() * remaining.length)]);
@@ -674,7 +711,6 @@
       const el = stateByName[name];
       const lbl = labelByName[name];
       if (el) {
-        el.classList.remove('picked', 'seln');
         el.classList.add('cycle');
         lastEl = el;
       }
@@ -682,11 +718,12 @@
         lbl.classList.add('show');
         lastLabel = lbl;
       }
+      tick(i / sequence.length);
 
       i++;
       if (i < sequence.length) {
         const t = i / sequence.length;
-        const delay = 55 + Math.pow(t, 2.2) * 320;
+        const delay = 70 + Math.pow(t, 2) * 240;
         setTimeout(step, delay);
       } else {
         if (lastEl) lastEl.classList.remove('cycle');
@@ -706,7 +743,7 @@
 
     const el = stateByName[winner];
     if (el) {
-      el.classList.remove('seln', 'picked', 'cycle');
+      el.classList.remove('cycle');
       el.classList.add('winner');
     }
     showLabel(winner);
