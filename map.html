@@ -391,21 +391,19 @@
     position: fixed;
     inset: 0;
     pointer-events: none;
-    overflow: hidden;
+    overflow: visible;
     z-index: 50;
   }
   .confetti span {
-    position: absolute;
-    width: 10px;
-    height: 14px;
-    top: -20px;
+    position: fixed;
     border-radius: 2px;
     will-change: transform, opacity;
-    animation: fall linear forwards;
+    animation: burst linear forwards;
   }
-  @keyframes fall {
-    0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
-    100% { transform: translate3d(var(--dx, 0), 110vh, 0) rotate(720deg); opacity: 0.9; }
+  @keyframes burst {
+    0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(0.6); opacity: 1; }
+    20%  { transform: translate3d(calc(var(--dx, 0) * 0.55), calc(var(--dy, 0) * 0.55), 0) rotate(220deg) scale(1); opacity: 1; }
+    100% { transform: translate3d(var(--dx, 0), calc(var(--dy, 0) + 380px), 0) rotate(720deg) scale(0.95); opacity: 0; }
   }
 
   @media (max-width: 980px) {
@@ -543,11 +541,14 @@
   const confettiEl = $('confetti');
   const mapLoading = $('mapLoading');
 
+  const STORAGE_KEY = 'seln-map-state-v1';
+
   let allStates = [...DEFAULT_SELN];
   let remaining = [...DEFAULT_SELN];
   let picked = [];
   let removedActive = new Set();
   let spinning = false;
+  let currentWinner = null;
 
   let timerSeconds = 30;
   let timerRemaining = 30;
@@ -602,13 +603,18 @@
       const name = d.properties.name;
       const el = this;
       el.classList.remove('seln', 'picked', 'cycle', 'winner');
-      if (picked.includes(name)) {
+      if (currentWinner === name) {
+        el.classList.add('winner');
+      } else if (picked.includes(name)) {
         el.classList.add('picked');
       } else if (allStates.includes(name) && !removedActive.has(name)) {
         el.classList.add('seln');
       }
     });
     Object.values(labelByName).forEach(l => l.classList.remove('show'));
+    if (currentWinner && labelByName[currentWinner]) {
+      labelByName[currentWinner].classList.add('show');
+    }
   }
 
   function showLabel(name) {
@@ -691,12 +697,13 @@
   function spin() {
     if (spinning || remaining.length === 0) return;
     spinning = true;
+    currentWinner = null;
     paintMap();
     renderPanel();
 
     const winner = remaining[Math.floor(Math.random() * remaining.length)];
 
-    const stepCount = Math.max(16, Math.min(remaining.length * 3, 26));
+    const stepCount = Math.max(15, Math.min(remaining.length * 3, 22));
     const sequence = [];
     for (let i = 0; i < stepCount - 1; i++) {
       sequence.push(remaining[Math.floor(Math.random() * remaining.length)]);
@@ -726,7 +733,8 @@
       i++;
       if (i < sequence.length) {
         const t = i / sequence.length;
-        const delay = 70 + Math.pow(t, 2) * 240;
+        let delay = 70 + Math.pow(t, 2) * 240;
+        if (i === sequence.length - 1) delay = 650;
         setTimeout(step, delay);
       } else {
         if (lastEl) lastEl.classList.remove('cycle');
@@ -744,18 +752,18 @@
     void resultEl.offsetWidth;
     resultEl.classList.add('pop');
 
+    currentWinner = winner;
     const el = stateByName[winner];
     if (el) {
       el.classList.remove('cycle');
       el.classList.add('winner');
     }
     showLabel(winner);
-    launchConfetti();
+    const pos = getStateScreenPos(winner);
+    launchConfetti(pos ? pos.x : null, pos ? pos.y : null);
+    playLandingChime();
 
     setTimeout(() => {
-      if (el) el.classList.remove('winner');
-      const lbl = labelByName[winner];
-      if (lbl) lbl.classList.remove('show');
       const idx = remaining.indexOf(winner);
       if (idx >= 0) {
         picked.push(winner);
@@ -764,26 +772,66 @@
       spinning = false;
       paintMap();
       renderPanel();
+      saveState();
       startTimerCountdown();
     }, 1800);
   }
 
-  function launchConfetti() {
+  function getStateScreenPos(name) {
+    const st = STATES_DATA.find(s => s.name === name);
+    if (!st) return null;
+    const svg = document.getElementById('usmap');
+    const rect = svg.getBoundingClientRect();
+    const scaleX = rect.width / 975;
+    const scaleY = rect.height / 610;
+    return { x: rect.left + st.cx * scaleX, y: rect.top + st.cy * scaleY };
+  }
+
+  function playLandingChime() {
+    const ac = getAudio();
+    if (!ac) return;
+    const t0 = ac.currentTime;
+    const notes = [
+      { freq: 988,  t: 0,    dur: 0.45 },
+      { freq: 1318, t: 0.13, dur: 0.65 }
+    ];
+    notes.forEach(n => {
+      const o = ac.createOscillator();
+      const g = ac.createGain();
+      o.type = 'sine';
+      o.frequency.value = n.freq;
+      o.connect(g); g.connect(ac.destination);
+      const t1 = t0 + n.t;
+      g.gain.setValueAtTime(0.0001, t1);
+      g.gain.exponentialRampToValueAtTime(0.18, t1 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t1 + n.dur);
+      o.start(t1);
+      o.stop(t1 + n.dur + 0.05);
+    });
+  }
+
+  function launchConfetti(originX, originY) {
+    const cx = (typeof originX === 'number') ? originX : window.innerWidth / 2;
+    const cy = (typeof originY === 'number') ? originY : window.innerHeight / 2;
     const count = 90;
     const frag = document.createDocumentFragment();
     for (let i = 0; i < count; i++) {
       const piece = document.createElement('span');
-      const left = Math.random() * 100;
-      const dx = (Math.random() - 0.5) * 240;
-      const dur = 2.4 + Math.random() * 1.6;
-      const delay = Math.random() * 0.4;
-      piece.style.left = left + 'vw';
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 220 + Math.random() * 380;
+      const dx = Math.cos(angle) * speed;
+      const dy = Math.sin(angle) * speed - 90;
+      const dur = 1.5 + Math.random() * 1.0;
+      const w = 6 + Math.random() * 8;
+      const h = 10 + Math.random() * 10;
+      piece.style.left = (cx - w / 2) + 'px';
+      piece.style.top = (cy - h / 2) + 'px';
+      piece.style.width = w + 'px';
+      piece.style.height = h + 'px';
       piece.style.background = PALETTE[i % PALETTE.length];
       piece.style.setProperty('--dx', dx + 'px');
+      piece.style.setProperty('--dy', dy + 'px');
       piece.style.animationDuration = dur + 's';
-      piece.style.animationDelay = delay + 's';
-      piece.style.width = (6 + Math.random() * 8) + 'px';
-      piece.style.height = (10 + Math.random() * 10) + 'px';
       piece.addEventListener('animationend', () => piece.remove());
       frag.appendChild(piece);
     }
@@ -792,15 +840,18 @@
 
   function removeState(name) {
     if (spinning) return;
+    if (currentWinner === name) currentWinner = null;
     const i = remaining.indexOf(name);
     if (i >= 0) remaining.splice(i, 1);
     removedActive.add(name);
     paintMap();
     renderPanel();
+    saveState();
   }
 
   function readdState(name) {
     if (spinning) return;
+    if (currentWinner === name) currentWinner = null;
     const i = picked.indexOf(name);
     if (i >= 0) picked.splice(i, 1);
     removedActive.delete(name);
@@ -808,6 +859,7 @@
     if (!allStates.includes(name)) allStates.push(name);
     paintMap();
     renderPanel();
+    saveState();
   }
 
   function reset() {
@@ -816,6 +868,7 @@
     remaining = [...DEFAULT_SELN];
     picked = [];
     removedActive = new Set();
+    currentWinner = null;
     resultEl.textContent = 'Press Spin to begin';
     resultEl.classList.add('placeholder');
     resultEl.classList.remove('pop');
@@ -823,6 +876,7 @@
     resetTimer();
     paintMap();
     renderPanel();
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
   }
 
   function showAddError(msg) {
@@ -844,6 +898,7 @@
       const i = picked.indexOf(match);
       picked.splice(i, 1);
     }
+    if (currentWinner === match) currentWinner = null;
     removedActive.delete(match);
     if (!allStates.includes(match)) allStates.push(match);
     if (!remaining.includes(match)) remaining.push(match);
@@ -851,6 +906,47 @@
     addError.textContent = '';
     paintMap();
     renderPanel();
+    saveState();
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        v: 1,
+        allStates,
+        remaining,
+        picked,
+        removedActive: [...removedActive],
+        currentWinner,
+        timerSeconds
+      }));
+    } catch (e) {}
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (!data || data.v !== 1) return false;
+      if (Array.isArray(data.allStates)) allStates = data.allStates;
+      if (Array.isArray(data.remaining)) remaining = data.remaining;
+      if (Array.isArray(data.picked)) picked = data.picked;
+      if (Array.isArray(data.removedActive)) removedActive = new Set(data.removedActive);
+      if (typeof data.currentWinner === 'string' && data.currentWinner) {
+        currentWinner = data.currentWinner;
+        resultEl.textContent = currentWinner;
+        resultEl.classList.remove('placeholder');
+      }
+      if (typeof data.timerSeconds === 'number' && data.timerSeconds > 0) {
+        timerSeconds = data.timerSeconds;
+        timerInput.value = timerSeconds;
+        timerRemaining = timerSeconds;
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   function formatTime(s) {
@@ -882,6 +978,11 @@
         stopTimer();
         timerCard.classList.add('done');
         playBeep();
+        if (currentWinner) {
+          currentWinner = null;
+          paintMap();
+          saveState();
+        }
       } else {
         renderTimer();
       }
@@ -939,6 +1040,7 @@
       timerSeconds = readTimerInput();
       timerRemaining = timerSeconds;
       renderTimer();
+      saveState();
     }
   });
   document.addEventListener('keydown', e => {
@@ -948,6 +1050,7 @@
     else if (e.key === 'r' || e.key === 'R') { reset(); }
   });
 
+  loadState();
   paintMap();
   renderPanel();
   resetTimer();
