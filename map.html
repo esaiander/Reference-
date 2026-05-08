@@ -119,19 +119,17 @@
   .state.seln { fill: var(--state-seln); }
   .state.picked { fill: var(--state-picked); }
   .state.cycle {
-    stroke: var(--seln-green);
-    stroke-width: 2.6;
+    fill: var(--seln-green-light);
     filter: drop-shadow(0 0 14px rgba(108, 179, 63, 0.85));
   }
   .state.winner {
-    stroke: var(--seln-green);
-    stroke-width: 3;
+    fill: var(--seln-green-light);
     filter: drop-shadow(0 0 28px rgba(108, 179, 63, 1));
     animation: winnerPulse 0.9s ease-in-out infinite;
   }
   @keyframes winnerPulse {
-    0%, 100% { filter: drop-shadow(0 0 22px rgba(108, 179, 63, 0.95)); }
-    50% { filter: drop-shadow(0 0 40px rgba(108, 179, 63, 1)); }
+    0%, 100% { filter: drop-shadow(0 0 22px rgba(108, 179, 63, 0.95)) brightness(1); }
+    50% { filter: drop-shadow(0 0 40px rgba(140, 215, 100, 1)) brightness(1.1); }
   }
 
   .state-label {
