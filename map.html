@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SELN Map Picker</title>
+<style>
+  :root {
+    --bg-1: #0b1437;
+    --bg-2: #1a237e;
+    --accent: #ffd54a;
+    --accent-2: #ff5252;
+    --text: #ffffff;
+    --muted: #c9d1ff;
+    --card: rgba(255, 255, 255, 0.06);
+    --card-border: rgba(255, 255, 255, 0.18);
+    --state-base: #2a3160;
+    --state-stroke: #0a0e26;
+    --state-seln: #4cc9f0;
+    --state-picked: #6b2a3a;
+    --state-cycle: #ffd54a;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: var(--text);
+    background: radial-gradient(ellipse at top, var(--bg-2) 0%, var(--bg-1) 60%, #050818 100%);
+    overflow: hidden;
+  }
+
+  .app {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 18px 28px;
+    gap: 14px;
+  }
+
+  header { text-align: center; position: relative; }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(26px, 3.2vw, 44px);
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  }
+  h1 .accent { color: var(--accent); }
+
+  .subtitle {
+    margin-top: 4px;
+    font-size: clamp(13px, 1.2vw, 16px);
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .nav-link {
+    position: absolute;
+    top: 6px;
+    right: 0;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--card-border);
+    background: var(--card);
+  }
+  .nav-link:hover { color: #fff; background: rgba(255,255,255,0.12); }
+
+  main {
+    display: grid;
+    grid-template-columns: minmax(420px, 1.7fr) minmax(280px, 1fr);
+    gap: 28px;
+    align-items: stretch;
+    min-height: 0;
+  }
+
+  .map-wrap {
+    position: relative;
+    background: rgba(0,0,0,0.18);
+    border: 1px solid var(--card-border);
+    border-radius: 22px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+  }
+
+  svg#usmap { width: 100%; height: 100%; display: block; }
+
+  .map-loading {
+    position: absolute;
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .state {
+    fill: var(--state-base);
+    stroke: var(--state-stroke);
+    stroke-width: 0.6;
+    transition: fill 120ms ease, filter 120ms ease, opacity 200ms ease;
+  }
+  .state.seln { fill: var(--state-seln); }
+  .state.picked { fill: var(--state-picked); opacity: 0.78; }
+  .state.cycle {
+    fill: var(--state-cycle);
+    filter: drop-shadow(0 0 14px rgba(255, 213, 74, 0.85));
+  }
+  .state.winner {
+    fill: var(--state-cycle);
+    filter: drop-shadow(0 0 26px rgba(255, 213, 74, 1)) brightness(1.1);
+    animation: winnerPulse 0.9s ease-in-out infinite;
+  }
+  @keyframes winnerPulse {
+    0%, 100% { filter: drop-shadow(0 0 22px rgba(255, 213, 74, 0.95)) brightness(1.05); }
+    50% { filter: drop-shadow(0 0 38px rgba(255, 240, 140, 1)) brightness(1.25); }
+  }
+
+  .state-label {
+    fill: #fff;
+    font-weight: 800;
+    text-anchor: middle;
+    pointer-events: none;
+    paint-order: stroke;
+    stroke: rgba(0,0,0,0.7);
+    stroke-width: 3px;
+    stroke-linejoin: round;
+    font-size: 26px;
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+  .state-label.show { opacity: 1; }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .result-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 18px;
+    padding: 18px 22px;
+    backdrop-filter: blur(8px);
+  }
+  .result-label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .result-value {
+    margin-top: 4px;
+    font-size: clamp(26px, 3.6vw, 48px);
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1.1;
+    word-break: break-word;
+  }
+  .result-value.placeholder {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: clamp(18px, 2.2vw, 28px);
+  }
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    60% { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .result-value.pop { animation: pop 0.55s cubic-bezier(.2,1.4,.4,1); }
+
+  .stats { display: flex; gap: 10px; }
+  .stat {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 12px 14px;
+  }
+  .stat .num {
+    font-size: clamp(20px, 2.4vw, 28px);
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .stat .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .timer-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 18px;
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+  .timer-card.warn { border-color: rgba(255, 82, 82, 0.55); }
+  .timer-card.done { animation: flashRed 0.6s ease 3; }
+  @keyframes flashRed {
+    0%, 100% { background: var(--card); }
+    50% { background: rgba(255, 82, 82, 0.32); }
+  }
+  .timer-display {
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+  .timer-display.warn { color: #ff8585; }
+  .timer-side { display: flex; flex-direction: column; gap: 6px; min-width: 130px; }
+  .timer-input-row {
+    display: flex; gap: 6px; align-items: center;
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--muted); font-weight: 600;
+  }
+  .timer-input-row input {
+    width: 70px; padding: 6px 8px; font-size: 15px; font-weight: 700;
+    color: #fff; background: rgba(255,255,255,0.08);
+    border: 1px solid var(--card-border); border-radius: 10px;
+    text-align: center; outline: none;
+  }
+  .timer-input-row input:focus { border-color: var(--accent); }
+  .timer-controls { display: flex; gap: 6px; }
+  .timer-controls button {
+    flex: 1; min-width: 0; padding: 7px 8px;
+    font-size: 12px; font-weight: 700;
+    background: rgba(255,255,255,0.12); color: #fff;
+    border-radius: 10px; box-shadow: none;
+  }
+  .timer-controls button:hover:not(:disabled) {
+    background: rgba(255,255,255,0.22);
+  }
+
+  .buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  button {
+    flex: 1;
+    min-width: 110px;
+    padding: 14px 18px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    color: #1a1a1a;
+  }
+  button.spin {
+    background: linear-gradient(180deg, #ffe97a, #ffc220);
+    color: #1a1530;
+    box-shadow: 0 8px 22px rgba(255, 200, 60, 0.35), inset 0 -3px 0 rgba(0,0,0,0.12);
+  }
+  button.reset {
+    background: linear-gradient(180deg, #ff8585, #ff3d3d);
+    color: #ffffff;
+    box-shadow: 0 8px 22px rgba(255, 80, 80, 0.35), inset 0 -3px 0 rgba(0,0,0,0.18);
+  }
+  button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .add-row { display: flex; gap: 8px; }
+  .add-row input {
+    flex: 1; min-width: 0;
+    padding: 12px 14px; font-size: 15px; font-weight: 500;
+    color: #fff; background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--card-border); border-radius: 12px;
+    outline: none;
+  }
+  .add-row input::placeholder { color: rgba(255, 255, 255, 0.45); }
+  .add-row input:focus { border-color: var(--accent); background: rgba(255, 255, 255, 0.12); }
+  .add-row button {
+    flex: 0 0 auto; min-width: 80px; padding: 12px 16px; font-size: 14px;
+    background: linear-gradient(180deg, #6cd3ff, #2196f3);
+    color: #06122a;
+    box-shadow: 0 8px 22px rgba(33, 150, 243, 0.3), inset 0 -3px 0 rgba(0,0,0,0.15);
+  }
+  .error {
+    color: #ffb3b3;
+    font-size: 12px;
+    min-height: 1em;
+    margin-top: -6px;
+  }
+
+  .remaining {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 12px 14px;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .remaining h3 {
+    margin: 0 0 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border-radius: 999px;
+    padding: 4px 6px 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .chip.picked {
+    background: rgba(255, 82, 82, 0.18);
+    border-color: rgba(255, 82, 82, 0.5);
+    color: #ffb3b3;
+    text-decoration: line-through;
+  }
+  .chip.removed {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255,255,255,0.55);
+  }
+  .chip button.chip-btn {
+    flex: 0 0 auto; min-width: 0;
+    padding: 0; width: 18px; height: 18px;
+    border-radius: 50%; font-size: 12px; font-weight: 700;
+    line-height: 1;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    box-shadow: none;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .chip button.chip-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.32);
+    transform: none; filter: none;
+  }
+  .chip.picked button.chip-btn,
+  .chip.removed button.chip-btn {
+    background: rgba(110, 231, 183, 0.35);
+    color: #d1fae5;
+  }
+  .chip.picked button.chip-btn:hover:not(:disabled),
+  .chip.removed button.chip-btn:hover:not(:disabled) {
+    background: rgba(110, 231, 183, 0.55);
+  }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    opacity: 0.8;
+  }
+
+  .confetti {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 50;
+  }
+  .confetti span {
+    position: absolute;
+    width: 10px;
+    height: 14px;
+    top: -20px;
+    border-radius: 2px;
+    will-change: transform, opacity;
+    animation: fall linear forwards;
+  }
+  @keyframes fall {
+    0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
+    100% { transform: translate3d(var(--dx, 0), 110vh, 0) rotate(720deg); opacity: 0.9; }
+  }
+
+  @media (max-width: 980px) {
+    main { grid-template-columns: 1fr; }
+    .app { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>SELN <span class="accent">Map Picker</span></h1>
+      <div class="subtitle">Cycles through SELN states across the US map and lands on the winner</div>
+      <a class="nav-link" href="index.html">Wheel version &rarr;</a>
+    </header>
+
+    <main>
+      <div class="map-wrap">
+        <svg id="usmap" viewBox="0 0 975 610" preserveAspectRatio="xMidYMid meet" aria-label="US map"></svg>
+        <div id="mapLoading" class="map-loading">Loading map…</div>
+      </div>
+
+      <section class="panel">
+        <div class="result-card">
+          <div class="result-label">Selected</div>
+          <div id="result" class="result-value placeholder">Press Spin to begin</div>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div id="remainingCount" class="num">0</div>
+            <div class="label">Remaining</div>
+          </div>
+          <div class="stat">
+            <div id="pickedCount" class="num">0</div>
+            <div class="label">Picked</div>
+          </div>
+        </div>
+
+        <div id="timerCard" class="timer-card">
+          <div id="timerDisplay" class="timer-display">0:30</div>
+          <div class="timer-side">
+            <label class="timer-input-row">
+              <span>Sec</span>
+              <input id="timerInput" type="number" min="1" max="3600" value="30" />
+            </label>
+            <div class="timer-controls">
+              <button id="timerStart" type="button">Start</button>
+              <button id="timerPause" type="button">Pause</button>
+              <button id="timerReset" type="button">Reset</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="buttons">
+          <button id="spin" class="spin" type="button">Spin</button>
+          <button id="reset" class="reset" type="button">Reset</button>
+        </div>
+
+        <form id="addForm" class="add-row" autocomplete="off">
+          <input id="addInput" type="text" placeholder="Add a US state…" maxlength="40" />
+          <button id="addBtn" type="submit">Add</button>
+        </form>
+        <div id="addError" class="error" role="alert" aria-live="polite"></div>
+
+        <div class="remaining">
+          <h3>States</h3>
+          <div id="chips" class="chips"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer>Tip: Use full-screen + Zoom &ldquo;Share Screen&rdquo; for the best look.</footer>
+  </div>
+  <div id="confetti" class="confetti" aria-hidden="true"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+<script>
+(async () => {
+  const DEFAULT_SELN = [
+    'Alabama', 'Alaska', 'Arizona', 'Connecticut', 'Delaware',
+    'Georgia', 'Hawaii', 'Indiana', 'Kansas', 'Louisiana',
+    'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Missouri',
+    'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'Ohio',
+    'Oklahoma', 'Oregon', 'Rhode Island', 'South Dakota', 'Texas',
+    'Utah', 'Virginia', 'Washington'
+  ];
+
+  const ALL_US_STATES = [
+    'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut',
+    'Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa',
+    'Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan',
+    'Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada',
+    'New Hampshire','New Jersey','New Mexico','New York','North Carolina',
+    'North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island',
+    'South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont',
+    'Virginia','Washington','West Virginia','Wisconsin','Wyoming',
+    'District of Columbia'
+  ];
+
+  const STATE_ABBR = {
+    'Alabama':'AL','Alaska':'AK','Arizona':'AZ','Arkansas':'AR','California':'CA',
+    'Colorado':'CO','Connecticut':'CT','Delaware':'DE','Florida':'FL','Georgia':'GA',
+    'Hawaii':'HI','Idaho':'ID','Illinois':'IL','Indiana':'IN','Iowa':'IA','Kansas':'KS',
+    'Kentucky':'KY','Louisiana':'LA','Maine':'ME','Maryland':'MD','Massachusetts':'MA',
+    'Michigan':'MI','Minnesota':'MN','Mississippi':'MS','Missouri':'MO','Montana':'MT',
+    'Nebraska':'NE','Nevada':'NV','New Hampshire':'NH','New Jersey':'NJ',
+    'New Mexico':'NM','New York':'NY','North Carolina':'NC','North Dakota':'ND',
+    'Ohio':'OH','Oklahoma':'OK','Oregon':'OR','Pennsylvania':'PA','Rhode Island':'RI',
+    'South Carolina':'SC','South Dakota':'SD','Tennessee':'TN','Texas':'TX','Utah':'UT',
+    'Vermont':'VT','Virginia':'VA','Washington':'WA','West Virginia':'WV',
+    'Wisconsin':'WI','Wyoming':'WY','District of Columbia':'DC'
+  };
+
+  const PALETTE = [
+    '#ef476f', '#ffd166', '#06d6a0', '#118ab2', '#8338ec',
+    '#fb5607', '#3a86ff', '#ff006e', '#43aa8b', '#f4a261'
+  ];
+
+  const $ = id => document.getElementById(id);
+  const resultEl = $('result');
+  const remainingCountEl = $('remainingCount');
+  const pickedCountEl = $('pickedCount');
+  const chipsEl = $('chips');
+  const spinBtn = $('spin');
+  const resetBtn = $('reset');
+  const addForm = $('addForm');
+  const addInput = $('addInput');
+  const addError = $('addError');
+  const timerCard = $('timerCard');
+  const timerDisplay = $('timerDisplay');
+  const timerInput = $('timerInput');
+  const timerStartBtn = $('timerStart');
+  const timerPauseBtn = $('timerPause');
+  const timerResetBtn = $('timerReset');
+  const confettiEl = $('confetti');
+  const mapLoading = $('mapLoading');
+
+  let allStates = [...DEFAULT_SELN];
+  let remaining = [...DEFAULT_SELN];
+  let picked = [];
+  let removedActive = new Set();
+  let spinning = false;
+
+  let timerSeconds = 30;
+  let timerRemaining = 30;
+  let timerEndAt = null;
+  let timerInterval = null;
+
+  let stateNodes = null;
+  let stateByName = {};
+  let labelByName = {};
+
+  try {
+    const us = await d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json');
+    const states = topojson.feature(us, us.objects.states);
+    const path = d3.geoPath();
+
+    const svg = d3.select('#usmap');
+
+    const g = svg.append('g').attr('class', 'states');
+    stateNodes = g.selectAll('path')
+      .data(states.features)
+      .join('path')
+      .attr('d', path)
+      .attr('class', 'state')
+      .attr('data-name', d => d.properties.name);
+
+    stateNodes.each(function(d) { stateByName[d.properties.name] = this; });
+
+    const labelG = svg.append('g').attr('class', 'labels');
+    labelG.selectAll('text')
+      .data(states.features)
+      .join('text')
+      .attr('class', 'state-label')
+      .attr('transform', d => {
+        const c = path.centroid(d);
+        return `translate(${c[0]}, ${c[1]})`;
+      })
+      .attr('data-name', d => d.properties.name)
+      .text(d => STATE_ABBR[d.properties.name] || '')
+      .each(function(d) { labelByName[d.properties.name] = this; });
+
+    mapLoading.style.display = 'none';
+  } catch (err) {
+    mapLoading.textContent = 'Failed to load map. Check internet connection.';
+    console.error(err);
+    return;
+  }
+
+  function paintMap() {
+    if (!stateNodes) return;
+    stateNodes.each(function(d) {
+      const name = d.properties.name;
+      const el = this;
+      el.classList.remove('seln', 'picked', 'cycle', 'winner');
+      if (picked.includes(name)) {
+        el.classList.add('picked');
+      } else if (allStates.includes(name) && !removedActive.has(name)) {
+        el.classList.add('seln');
+      }
+    });
+    Object.values(labelByName).forEach(l => l.classList.remove('show'));
+  }
+
+  function showLabel(name) {
+    const l = labelByName[name];
+    if (l) l.classList.add('show');
+  }
+
+  function renderPanel() {
+    remainingCountEl.textContent = remaining.length;
+    pickedCountEl.textContent = picked.length;
+
+    chipsEl.innerHTML = '';
+    const ordered = [...allStates];
+    removedActive.forEach(s => { if (!ordered.includes(s)) ordered.push(s); });
+    picked.forEach(s => { if (!ordered.includes(s)) ordered.push(s); });
+
+    ordered.forEach(s => {
+      const isPicked = picked.includes(s);
+      const isRemoved = removedActive.has(s) && !isPicked;
+      const span = document.createElement('span');
+      span.className = 'chip' + (isPicked ? ' picked' : (isRemoved ? ' removed' : ''));
+
+      const text = document.createElement('span');
+      text.textContent = s;
+      span.appendChild(text);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chip-btn';
+      btn.disabled = spinning;
+      if (isPicked || isRemoved) {
+        btn.textContent = '↺';
+        btn.title = `Put ${s} back on the wheel`;
+        btn.setAttribute('aria-label', `Put ${s} back on the wheel`);
+        btn.addEventListener('click', () => readdState(s));
+      } else {
+        btn.textContent = '×';
+        btn.title = `Remove ${s} from the wheel`;
+        btn.setAttribute('aria-label', `Remove ${s} from the wheel`);
+        btn.addEventListener('click', () => removeState(s));
+      }
+      span.appendChild(btn);
+      chipsEl.appendChild(span);
+    });
+
+    spinBtn.disabled = spinning || remaining.length === 0;
+    const isPristine = picked.length === 0
+      && removedActive.size === 0
+      && allStates.length === DEFAULT_SELN.length
+      && DEFAULT_SELN.every(s => allStates.includes(s));
+    resetBtn.disabled = spinning || isPristine;
+  }
+
+  function spin() {
+    if (spinning || remaining.length === 0) return;
+    spinning = true;
+    paintMap();
+    renderPanel();
+
+    const winner = remaining[Math.floor(Math.random() * remaining.length)];
+
+    const stepCount = Math.max(18, Math.min(remaining.length * 4, 36));
+    const sequence = [];
+    for (let i = 0; i < stepCount - 1; i++) {
+      sequence.push(remaining[Math.floor(Math.random() * remaining.length)]);
+    }
+    sequence.push(winner);
+
+    let i = 0;
+    let lastEl = null;
+    let lastLabel = null;
+
+    function step() {
+      if (lastEl) lastEl.classList.remove('cycle');
+      if (lastLabel) lastLabel.classList.remove('show');
+      const name = sequence[i];
+      const el = stateByName[name];
+      const lbl = labelByName[name];
+      if (el) {
+        el.classList.remove('picked', 'seln');
+        el.classList.add('cycle');
+        lastEl = el;
+      }
+      if (lbl) {
+        lbl.classList.add('show');
+        lastLabel = lbl;
+      }
+
+      i++;
+      if (i < sequence.length) {
+        const t = i / sequence.length;
+        const delay = 55 + Math.pow(t, 2.2) * 320;
+        setTimeout(step, delay);
+      } else {
+        if (lastEl) lastEl.classList.remove('cycle');
+        if (lastLabel) lastLabel.classList.remove('show');
+        finishSpin(winner);
+      }
+    }
+    step();
+  }
+
+  function finishSpin(winner) {
+    resultEl.textContent = winner;
+    resultEl.classList.remove('placeholder');
+    resultEl.classList.remove('pop');
+    void resultEl.offsetWidth;
+    resultEl.classList.add('pop');
+
+    const el = stateByName[winner];
+    if (el) {
+      el.classList.remove('seln', 'picked', 'cycle');
+      el.classList.add('winner');
+    }
+    showLabel(winner);
+    launchConfetti();
+
+    setTimeout(() => {
+      if (el) el.classList.remove('winner');
+      const lbl = labelByName[winner];
+      if (lbl) lbl.classList.remove('show');
+      const idx = remaining.indexOf(winner);
+      if (idx >= 0) {
+        picked.push(winner);
+        remaining.splice(idx, 1);
+      }
+      spinning = false;
+      paintMap();
+      renderPanel();
+      startTimerCountdown();
+    }, 1800);
+  }
+
+  function launchConfetti() {
+    const count = 90;
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < count; i++) {
+      const piece = document.createElement('span');
+      const left = Math.random() * 100;
+      const dx = (Math.random() - 0.5) * 240;
+      const dur = 2.4 + Math.random() * 1.6;
+      const delay = Math.random() * 0.4;
+      piece.style.left = left + 'vw';
+      piece.style.background = PALETTE[i % PALETTE.length];
+      piece.style.setProperty('--dx', dx + 'px');
+      piece.style.animationDuration = dur + 's';
+      piece.style.animationDelay = delay + 's';
+      piece.style.width = (6 + Math.random() * 8) + 'px';
+      piece.style.height = (10 + Math.random() * 10) + 'px';
+      piece.addEventListener('animationend', () => piece.remove());
+      frag.appendChild(piece);
+    }
+    confettiEl.appendChild(frag);
+  }
+
+  function removeState(name) {
+    if (spinning) return;
+    const i = remaining.indexOf(name);
+    if (i >= 0) remaining.splice(i, 1);
+    removedActive.add(name);
+    paintMap();
+    renderPanel();
+  }
+
+  function readdState(name) {
+    if (spinning) return;
+    const i = picked.indexOf(name);
+    if (i >= 0) picked.splice(i, 1);
+    removedActive.delete(name);
+    if (!remaining.includes(name)) remaining.push(name);
+    if (!allStates.includes(name)) allStates.push(name);
+    paintMap();
+    renderPanel();
+  }
+
+  function reset() {
+    if (spinning) return;
+    allStates = [...DEFAULT_SELN];
+    remaining = [...DEFAULT_SELN];
+    picked = [];
+    removedActive = new Set();
+    resultEl.textContent = 'Press Spin to begin';
+    resultEl.classList.add('placeholder');
+    resultEl.classList.remove('pop');
+    addError.textContent = '';
+    resetTimer();
+    paintMap();
+    renderPanel();
+  }
+
+  function showAddError(msg) {
+    addError.textContent = msg;
+    if (msg) setTimeout(() => { if (addError.textContent === msg) addError.textContent = ''; }, 2500);
+  }
+
+  function addState(rawName) {
+    if (spinning) return;
+    const name = rawName.trim().replace(/\s+/g, ' ');
+    if (!name) { showAddError('Enter a US state name.'); return; }
+    const match = ALL_US_STATES.find(s => s.toLowerCase() === name.toLowerCase());
+    if (!match) { showAddError(`"${name}" is not a US state.`); return; }
+    if (allStates.includes(match) && !removedActive.has(match) && !picked.includes(match)) {
+      showAddError(`${match} is already on the wheel.`);
+      return;
+    }
+    if (picked.includes(match)) {
+      const i = picked.indexOf(match);
+      picked.splice(i, 1);
+    }
+    removedActive.delete(match);
+    if (!allStates.includes(match)) allStates.push(match);
+    if (!remaining.includes(match)) remaining.push(match);
+    addInput.value = '';
+    addError.textContent = '';
+    paintMap();
+    renderPanel();
+  }
+
+  function formatTime(s) {
+    s = Math.max(0, Math.ceil(s));
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  }
+  function renderTimer() {
+    timerDisplay.textContent = formatTime(timerRemaining);
+    const warn = timerRemaining <= 5 && timerRemaining > 0 && timerEndAt;
+    timerDisplay.classList.toggle('warn', !!warn);
+    timerCard.classList.toggle('warn', !!warn);
+  }
+  function readTimerInput() {
+    const v = parseInt(timerInput.value, 10);
+    return (Number.isFinite(v) && v > 0) ? Math.min(v, 3600) : 30;
+  }
+  function startTimer() {
+    if (timerInterval) return;
+    if (timerRemaining <= 0) timerRemaining = readTimerInput();
+    timerEndAt = performance.now() + timerRemaining * 1000;
+    timerCard.classList.remove('done');
+    timerInterval = setInterval(() => {
+      timerRemaining = (timerEndAt - performance.now()) / 1000;
+      if (timerRemaining <= 0) {
+        timerRemaining = 0;
+        renderTimer();
+        stopTimer();
+        timerCard.classList.add('done');
+        playBeep();
+      } else {
+        renderTimer();
+      }
+    }, 100);
+  }
+  function stopTimer() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    timerEndAt = null;
+  }
+  function pauseTimer() { stopTimer(); renderTimer(); }
+  function resetTimer() {
+    stopTimer();
+    timerSeconds = readTimerInput();
+    timerRemaining = timerSeconds;
+    timerCard.classList.remove('done');
+    renderTimer();
+  }
+  function startTimerCountdown() {
+    timerSeconds = readTimerInput();
+    timerRemaining = timerSeconds;
+    timerCard.classList.remove('done');
+    renderTimer();
+    startTimer();
+  }
+  function playBeep() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ac = new Ctx();
+      const tones = [880, 660, 880];
+      tones.forEach((freq, i) => {
+        const o = ac.createOscillator();
+        const g = ac.createGain();
+        o.frequency.value = freq;
+        o.type = 'triangle';
+        o.connect(g); g.connect(ac.destination);
+        const t0 = ac.currentTime + i * 0.18;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+        o.start(t0); o.stop(t0 + 0.18);
+      });
+      setTimeout(() => ac.close(), 1200);
+    } catch (e) {}
+  }
+
+  spinBtn.addEventListener('click', spin);
+  resetBtn.addEventListener('click', reset);
+  addForm.addEventListener('submit', e => { e.preventDefault(); addState(addInput.value); });
+  timerStartBtn.addEventListener('click', startTimer);
+  timerPauseBtn.addEventListener('click', pauseTimer);
+  timerResetBtn.addEventListener('click', resetTimer);
+  timerInput.addEventListener('change', () => {
+    if (!timerInterval) {
+      timerSeconds = readTimerInput();
+      timerRemaining = timerSeconds;
+      renderTimer();
+    }
+  });
+  document.addEventListener('keydown', e => {
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (e.code === 'Space') { e.preventDefault(); spin(); }
+    else if (e.key === 'r' || e.key === 'R') { reset(); }
+  });
+
+  paintMap();
+  renderPanel();
+  resetTimer();
+})();
+</script>
+</body>
+</html>

@@ -38,7 +38,23 @@
 
   header {
     text-align: center;
+    position: relative;
   }
+
+  .nav-link {
+    position: absolute;
+    top: 6px;
+    right: 0;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--card-border);
+    background: var(--card);
+  }
+  .nav-link:hover { color: #fff; background: rgba(255,255,255,0.12); }
 
   h1 {
     margin: 0;
@@ -477,6 +493,7 @@
     <header>
       <h1>SELN <span class="accent">Picker Wheel</span></h1>
       <div class="subtitle">Spin to select a state — picked states are removed automatically</div>
+      <a class="nav-link" href="map.html">Map version &rarr;</a>
     </header>
 
     <main>
