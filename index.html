@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SELN Picker Wheel</title>
+<style>
+  :root {
+    --bg-1: #0b1437;
+    --bg-2: #1a237e;
+    --accent: #ffd54a;
+    --accent-2: #ff5252;
+    --text: #ffffff;
+    --muted: #c9d1ff;
+    --card: rgba(255, 255, 255, 0.06);
+    --card-border: rgba(255, 255, 255, 0.18);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: var(--text);
+    background: radial-gradient(ellipse at top, var(--bg-2) 0%, var(--bg-1) 60%, #050818 100%);
+    overflow: hidden;
+  }
+
+  .app {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 24px 32px;
+    gap: 16px;
+  }
+
+  header {
+    text-align: center;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(28px, 3.4vw, 48px);
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  }
+
+  h1 .accent { color: var(--accent); }
+
+  .subtitle {
+    margin-top: 6px;
+    font-size: clamp(14px, 1.3vw, 18px);
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: minmax(320px, 1.4fr) minmax(260px, 1fr);
+    gap: 32px;
+    align-items: center;
+    min-height: 0;
+  }
+
+  .wheel-wrap {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    max-height: 100%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.55));
+  }
+
+  .pointer {
+    position: absolute;
+    top: 50%;
+    right: -18px;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 26px solid transparent;
+    border-bottom: 26px solid transparent;
+    border-right: 44px solid var(--accent);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+    z-index: 2;
+  }
+
+  .hub {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 14%;
+    height: 14%;
+    background: radial-gradient(circle at 35% 30%, #ffffff, #d6d9e6 60%, #8b91ad 100%);
+    border-radius: 50%;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), inset 0 -4px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+  }
+
+  .result-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 18px;
+    padding: 22px 24px;
+    backdrop-filter: blur(8px);
+  }
+
+  .result-label {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .result-value {
+    margin-top: 6px;
+    font-size: clamp(28px, 4vw, 56px);
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1.1;
+    min-height: 1.1em;
+    word-break: break-word;
+  }
+
+  .result-value.placeholder {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: clamp(20px, 2.4vw, 32px);
+  }
+
+  .stats {
+    display: flex;
+    gap: 12px;
+  }
+
+  .stat {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+  }
+
+  .stat .num {
+    font-size: clamp(22px, 2.6vw, 32px);
+    font-weight: 800;
+    color: var(--accent);
+  }
+
+  .stat .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    flex: 1;
+    min-width: 130px;
+    padding: 16px 22px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    color: #1a1a1a;
+  }
+
+  button.spin {
+    background: linear-gradient(180deg, #ffe97a, #ffc220);
+    color: #1a1530;
+    box-shadow: 0 8px 22px rgba(255, 200, 60, 0.35), inset 0 -3px 0 rgba(0,0,0,0.12);
+  }
+
+  button.reset {
+    background: linear-gradient(180deg, #ff8585, #ff3d3d);
+    color: #ffffff;
+    box-shadow: 0 8px 22px rgba(255, 80, 80, 0.35), inset 0 -3px 0 rgba(0,0,0,0.18);
+  }
+
+  button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+  }
+
+  button:active:not(:disabled) { transform: translateY(1px); }
+
+  button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .remaining {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    max-height: 32vh;
+    overflow-y: auto;
+  }
+
+  .remaining h3 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .chip {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .chip.picked {
+    background: rgba(255, 82, 82, 0.18);
+    border-color: rgba(255, 82, 82, 0.5);
+    color: #ffb3b3;
+    text-decoration: line-through;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    opacity: 0.8;
+  }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; }
+    .app { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>SELN <span class="accent">Picker Wheel</span></h1>
+      <div class="subtitle">Spin to select a state — picked states are removed automatically</div>
+    </header>
+
+    <main>
+      <div class="wheel-wrap">
+        <canvas id="wheel" width="800" height="800" aria-label="Picker wheel"></canvas>
+        <div class="hub" aria-hidden="true"></div>
+        <div class="pointer" aria-hidden="true"></div>
+      </div>
+
+      <section class="panel">
+        <div class="result-card">
+          <div class="result-label">Selected</div>
+          <div id="result" class="result-value placeholder">Press Spin to begin</div>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div id="remainingCount" class="num">0</div>
+            <div class="label">Remaining</div>
+          </div>
+          <div class="stat">
+            <div id="pickedCount" class="num">0</div>
+            <div class="label">Picked</div>
+          </div>
+        </div>
+
+        <div class="buttons">
+          <button id="spin" class="spin" type="button">Spin</button>
+          <button id="reset" class="reset" type="button">Reset</button>
+        </div>
+
+        <div class="remaining">
+          <h3>States</h3>
+          <div id="chips" class="chips"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer>Tip: Use full-screen + Zoom &ldquo;Share Screen&rdquo; for the best look.</footer>
+  </div>
+
+<script>
+(() => {
+  const SELN_STATES = [
+    'California', 'Connecticut', 'Delaware', 'Hawaii', 'Illinois',
+    'Iowa', 'Kansas', 'Maine', 'Maryland', 'Massachusetts',
+    'Michigan', 'Minnesota', 'Missouri', 'New Jersey', 'New York',
+    'North Carolina', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania',
+    'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia',
+    'Washington', 'Wisconsin'
+  ];
+
+  const PALETTE = [
+    '#ef476f', '#ffd166', '#06d6a0', '#118ab2', '#8338ec',
+    '#fb5607', '#3a86ff', '#ff006e', '#43aa8b', '#f4a261',
+    '#9d4edd', '#2a9d8f', '#e76f51', '#4cc9f0', '#f72585'
+  ];
+
+  const canvas = document.getElementById('wheel');
+  const ctx = canvas.getContext('2d');
+  const resultEl = document.getElementById('result');
+  const remainingCountEl = document.getElementById('remainingCount');
+  const pickedCountEl = document.getElementById('pickedCount');
+  const chipsEl = document.getElementById('chips');
+  const spinBtn = document.getElementById('spin');
+  const resetBtn = document.getElementById('reset');
+
+  let remaining = [...SELN_STATES];
+  let picked = [];
+  let rotation = 0;
+  let spinning = false;
+
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const size = Math.floor(Math.min(rect.width, rect.height));
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawWheel();
+  }
+
+  function colorFor(label) {
+    const idx = SELN_STATES.indexOf(label);
+    return PALETTE[(idx >= 0 ? idx : 0) % PALETTE.length];
+  }
+
+  function drawWheel() {
+    const w = canvas.width / (window.devicePixelRatio || 1);
+    const h = canvas.height / (window.devicePixelRatio || 1);
+    const cx = w / 2;
+    const cy = h / 2;
+    const radius = Math.min(w, h) / 2 - 8;
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (remaining.length === 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#2a2f55';
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold ${Math.floor(radius * 0.12)}px Segoe UI, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('All states picked!', cx, cy - radius * 0.05);
+      ctx.font = `${Math.floor(radius * 0.07)}px Segoe UI, sans-serif`;
+      ctx.fillStyle = '#c9d1ff';
+      ctx.fillText('Press Reset to start over', cx, cy + radius * 0.1);
+      return;
+    }
+
+    const n = remaining.length;
+    const arc = (Math.PI * 2) / n;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+
+    for (let i = 0; i < n; i++) {
+      const start = i * arc;
+      const end = start + arc;
+
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, radius, start, end);
+      ctx.closePath();
+      ctx.fillStyle = colorFor(remaining[i]);
+      ctx.fill();
+
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    const fontSize = Math.max(12, Math.min(28, Math.floor(radius / Math.max(n, 8) * 1.6)));
+    ctx.font = `700 ${fontSize}px Segoe UI, sans-serif`;
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 4;
+
+    for (let i = 0; i < n; i++) {
+      const angle = i * arc + arc / 2;
+      ctx.save();
+      ctx.rotate(angle);
+      ctx.fillText(remaining[i], radius - 18, 0);
+      ctx.restore();
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
+  function renderPanel() {
+    remainingCountEl.textContent = remaining.length;
+    pickedCountEl.textContent = picked.length;
+
+    chipsEl.innerHTML = '';
+    SELN_STATES.forEach(s => {
+      const span = document.createElement('span');
+      span.className = 'chip' + (picked.includes(s) ? ' picked' : '');
+      span.textContent = s;
+      chipsEl.appendChild(span);
+    });
+
+    spinBtn.disabled = spinning || remaining.length === 0;
+    resetBtn.disabled = spinning || picked.length === 0;
+  }
+
+  function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function spin() {
+    if (spinning || remaining.length === 0) return;
+    spinning = true;
+    renderPanel();
+
+    const n = remaining.length;
+    const arc = (Math.PI * 2) / n;
+    const targetIndex = Math.floor(Math.random() * n);
+
+    const targetCenter = targetIndex * arc + arc / 2;
+    const turns = 5 + Math.random() * 2;
+    const finalRotation = (Math.PI * 2) * turns - targetCenter;
+
+    const startRotation = rotation % (Math.PI * 2);
+    const delta = finalRotation - startRotation;
+    const duration = 4200 + Math.random() * 800;
+    const startTime = performance.now();
+
+    function frame(now) {
+      const t = Math.min(1, (now - startTime) / duration);
+      rotation = startRotation + delta * easeOutCubic(t);
+      drawWheel();
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        finishSpin(targetIndex);
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function finishSpin(index) {
+    const winner = remaining[index];
+    resultEl.textContent = winner;
+    resultEl.classList.remove('placeholder');
+    picked.push(winner);
+    remaining.splice(index, 1);
+    rotation = rotation % (Math.PI * 2);
+    spinning = false;
+    drawWheel();
+    renderPanel();
+  }
+
+  function reset() {
+    if (spinning) return;
+    remaining = [...SELN_STATES];
+    picked = [];
+    rotation = 0;
+    resultEl.textContent = 'Press Spin to begin';
+    resultEl.classList.add('placeholder');
+    drawWheel();
+    renderPanel();
+  }
+
+  spinBtn.addEventListener('click', spin);
+  resetBtn.addEventListener('click', reset);
+  window.addEventListener('resize', resizeCanvas);
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space') { e.preventDefault(); spin(); }
+    else if (e.key === 'r' || e.key === 'R') { reset(); }
+  });
+
+  resizeCanvas();
+  renderPanel();
+})();
+</script>
+</body>
+</html>
