@@ -619,9 +619,21 @@
   let timerInterval = null;
 
   function resizeCanvas() {
+    const wrap = canvas.parentElement;
+    const wrapRect = wrap.getBoundingClientRect();
+    const size = Math.floor(Math.min(wrapRect.width, wrapRect.height));
+    if (size <= 0) return;
+
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+
+    const pointer = wrap.querySelector('.pointer');
+    if (pointer) {
+      const horizGap = (wrapRect.width - size) / 2;
+      pointer.style.right = (horizGap - 18) + 'px';
+    }
+
     const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    const size = Math.floor(Math.min(rect.width, rect.height));
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1124,6 +1136,9 @@
     }
   });
   window.addEventListener('resize', resizeCanvas);
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(resizeCanvas).observe(canvas.parentElement);
+  }
   document.addEventListener('keydown', e => {
     const tag = (document.activeElement && document.activeElement.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
